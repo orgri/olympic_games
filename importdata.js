@@ -37,8 +37,54 @@ const process = async (array) => {
     };
   });
 
+  const sports = [...new Set(table.get('Sport'))].map((el, id) => {
+    return {
+      id: id + 1,
+      name: el
+    };
+  });
+
+  const events = [...new Set(table.get('Event'))].map((el, id) => {
+    return {
+      id: id + 1,
+      name: el
+    };
+  });
+
+  const games = Array.from(
+    table.get('Games').reduce((acc, game, idx) => {
+      const year = table.get('Year')[idx];
+      const season = table.get('Season')[idx] === 'Summer' ? 0 : 1;
+      const city = table.get('City')[idx];
+      // handle more than one city
+      if (acc.has(game) && !acc.get(game).city.includes(city)) {
+        acc.set(game, {
+          year: year,
+          season: season,
+          city: acc.get(game).city + ', ' + city
+        });
+      } else if (game !== '1906 Summer' && !acc.has(game)) {
+        acc.set(game, {
+          year: year,
+          season: season,
+          city: city
+        });
+      }
+      return acc;
+    }, new Map())).map((el, id) => {
+    return {
+      id: id + 1,
+      year: el[1].year,
+      season: el[1].season,
+      city: el[1].city
+    };
+  });
+
   return {
-    teams: teams
+    teams: teams,
+    sports: sports,
+    events: events,
+    games: games
   };
 };
 
