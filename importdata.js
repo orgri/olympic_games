@@ -1,6 +1,8 @@
 const fs = require('fs').promises;
+const sqlite3 = require('sqlite3').verbose();
 
 const fileName = './athlete_events.csv';
+const dbName = './olympic_history.db';
 
 const parseFile = async (file) => {
   const data = await fs.readFile(file, 'utf8');
@@ -19,7 +21,7 @@ const parseFile = async (file) => {
 };
 
 const process = async (array) => {
-  console.log('Processing...');
+  console.log('Prepearing data...');
   const header = array.shift();
   const table = header.reduce((curr, key, idx) => {
     return curr.set(key, array.map(val => val[idx]));
@@ -176,12 +178,79 @@ const process = async (array) => {
   };
 };
 
+const openDB = async (file) => {
+  let db;
+  await new Promise((resolve, reject) => {
+    db = new sqlite3.Database(file, sqlite3.OPEN_READWRITE, (err) => {
+      if (err) {
+        reject (new Error('Open error: ' + 'unable to open ' + file));
+      } else {
+        console.log('Open db connection.');
+        resolve(db);
+      }
+    });
+  });
+  return db;
+};
+
+const run = async (db, sql, params) => {
+  return new Promise((resolve, reject) => {
+    db.serialize(() => {
+      db.run(sql, params, (err) => {
+        if (err) reject(err);
+        resolve(true);
+      });
+    });
+  });
+};
+
+const close = async (db) => {
+  return new Promise((resolve, reject) => {
+    db.close((err) => {
+      if (err) reject(err);
+      console.log('Close db connection.');
+      resolve(true);
+    });
+  });
+};
+
+const insert = async (db, data) => {
+  console.log('Inserting data...');
+  Object.entries(data).forEach(table => {
+    const tableName = table[0];
+    const variables = table[1];
+    const MAX_VARIABLES = 999;
+
+    const varLength = variables.length;
+    const keys = Object.keys(variables[0]);
+    const placeholders = Array(keys.length).fill('?').join(',');
+    const step = Math.floor(MAX_VARIABLES / keys.length);
+
+    for (let i = 0; i < varLength; i += step) {
+      const chunk = variables.slice(i, i + step);
+      const end = chunk.map(() => `(${placeholders})`).join(',');
+      const sql = `INSERT INTO ${tableName} (${keys.join(',')}) VALUES` + end;
+      const values = chunk.map(el => Object.values(el)).flat(2);
+      run(db, sql, values).catch(err => {
+        if (err.code === 'SQLITE_CONSTRAINT' && i === 0) {
+          console.error(`Inserting data is already in the '${tableName}' table`);
+        } else if (err.code !== 'SQLITE_CONSTRAINT') {
+          console.error(err);
+        }
+      });
+    }
+  });
+};
+
 const main = async () => {
   try {
     const array = await parseFile(fileName);
     const data = await process(array);
+    const db = await openDB(dbName); 
+    await insert(db, data);
+    await close(db);
   } catch (err) {
-    console.error(err);
+    console.error(err.message);
   }
 };
 
