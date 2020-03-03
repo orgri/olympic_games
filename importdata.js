@@ -1,5 +1,5 @@
 const fs = require('fs').promises;
-const sqlite3 = require('sqlite3').verbose();
+const sqlite = require('./dbwrapper.js');
 
 const fileName = './athlete_events.csv';
 const dbName = './olympic_history.db';
@@ -178,42 +178,6 @@ const process = async (array) => {
   };
 };
 
-const openDB = async (file) => {
-  let db;
-  await new Promise((resolve, reject) => {
-    db = new sqlite3.Database(file, sqlite3.OPEN_READWRITE, (err) => {
-      if (err) {
-        reject (new Error('Open error: ' + 'unable to open ' + file));
-      } else {
-        console.log('Open db connection.');
-        resolve(db);
-      }
-    });
-  });
-  return db;
-};
-
-const run = async (db, sql, params) => {
-  return new Promise((resolve, reject) => {
-    db.serialize(() => {
-      db.run(sql, params, (err) => {
-        if (err) reject(err);
-        resolve(true);
-      });
-    });
-  });
-};
-
-const close = async (db) => {
-  return new Promise((resolve, reject) => {
-    db.close((err) => {
-      if (err) reject(err);
-      console.log('Close db connection.');
-      resolve(true);
-    });
-  });
-};
-
 const insert = async (db, data) => {
   console.log('Inserting data...');
   Object.entries(data).forEach(table => {
@@ -231,7 +195,7 @@ const insert = async (db, data) => {
       const end = chunk.map(() => `(${placeholders})`).join(',');
       const sql = `INSERT INTO ${tableName} (${keys.join(',')}) VALUES` + end;
       const values = chunk.map(el => Object.values(el)).flat(2);
-      run(db, sql, values).catch(err => {
+      sqlite.run(db, sql, values).catch(err => {
         if (err.code === 'SQLITE_CONSTRAINT' && i === 0) {
           console.error(`Inserting data is already in the '${tableName}' table`);
         } else if (err.code !== 'SQLITE_CONSTRAINT') {
@@ -246,9 +210,9 @@ const main = async () => {
   try {
     const array = await parseFile(fileName);
     const data = await process(array);
-    const db = await openDB(dbName); 
+    const db = await sqlite.open(dbName);
     await insert(db, data);
-    await close(db);
+    sqlite.close(db);
   } catch (err) {
     console.error(err.message);
   }
