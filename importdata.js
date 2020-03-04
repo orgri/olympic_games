@@ -1,8 +1,10 @@
+#!/usr/bin/env node
+
 const fs = require('fs').promises;
 const sqlite = require('./dbwrapper.js');
 
-const fileName = './athlete_events.csv';
-const dbName = './olympic_history.db';
+const CSV_DEFAULT = './athlete_events.csv';
+const DB_DEFAULT = './olympic_history.db';
 
 const parseFile = async (file) => {
   const data = await fs.readFile(file, 'utf8');
@@ -20,7 +22,7 @@ const parseFile = async (file) => {
   });
 };
 
-const process = async (array) => {
+const prepare = async (array) => {
   console.log('Prepearing data...');
   const header = array.shift();
   const table = header.reduce((curr, key, idx) => {
@@ -208,9 +210,10 @@ const insert = async (db, data) => {
 
 const main = async () => {
   try {
-    const array = await parseFile(fileName);
-    const data = await process(array);
-    const db = await sqlite.open(dbName);
+    const args = process.argv.slice(2);
+    const array = await parseFile(args[0] || CSV_DEFAULT);
+    const data = await prepare(array);
+    const db = await sqlite.open(args[1] || DB_DEFAULT);
     await insert(db, data);
     sqlite.close(db);
   } catch (err) {
