@@ -1,5 +1,6 @@
 const sqlite = require('./dbwrapper.js');
 const chart = require('./chart.js');
+const cli = require('./argsparser.js');
 
 const dbFile = './olympic_history.db';
 
@@ -55,12 +56,7 @@ const getMedalsStats = async (db, params) => {
 
 const main = async () => {
   try {
-    const params = {
-      type: 'top',
-      season: '0',
-      medal: '1',
-      other: '2004'
-    };
+    const params = await cli.parseArgs();
     const db = await sqlite.open(dbFile);
     let data;
     switch (params.type) {
