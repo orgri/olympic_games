@@ -1,8 +1,10 @@
+#!/usr/bin/env node
+
 const sqlite = require('./dbwrapper.js');
 const chart = require('./chart.js');
 const cli = require('./argsparser.js');
 
-const dbFile = './olympic_history.db';
+const DB_DEFAULT = './olympic_history.db';
 
 const getTopTeams = async (db, params) => {
   const medalClause = params.medal ? 'r.medal = ?' : 'r.medal > 0';
@@ -57,7 +59,7 @@ const getMedalsStats = async (db, params) => {
 const main = async () => {
   try {
     const params = await cli.parseArgs();
-    const db = await sqlite.open(dbFile);
+    const db = await sqlite.open(DB_DEFAULT);
     let data;
     switch (params.type) {
     case 'top':

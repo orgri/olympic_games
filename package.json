@@ -9,10 +9,14 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "bin": {
+    "stats": "./stats.js"
+  },
   "author": "Vlad Reva",
   "license": "ISC",
   "devDependencies": {
     "eslint": "^6.8.0",
-    "eslint-plugin-node": "^11.0.0"
+    "eslint-plugin-node": "^11.0.0",
+    "sqlite3": "^4.1.1"
   }
 }
