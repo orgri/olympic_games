@@ -160,6 +160,7 @@ const prepare = async (array) => {
     // skip results of 1906 Summer games
     if (table.get('Games')[idx] !== '1906 Summer') {
       acc.push({
+        id: acc.length + 1,
         athlete_id: +el,
         game_id: getGameId(),
         sport_id: getSportId(),
