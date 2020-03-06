@@ -1,9 +1,8 @@
 const sqlite3 = require('sqlite3').verbose();
 
 exports.open = async (file) => {
-  let db;
-  await new Promise((resolve, reject) => {
-    db = new sqlite3.Database(file, sqlite3.OPEN_READWRITE, (err) => {
+  return new Promise((resolve, reject) => {
+    const db = new sqlite3.Database(file, sqlite3.OPEN_READWRITE, (err) => {
       if (err) {
         reject (new Error('Open error: ' + 'unable to open ' + file));
       } else {
@@ -11,7 +10,6 @@ exports.open = async (file) => {
       }
     });
   });
-  return db;
 };
 
 exports.run = async (db, sql, params = []) => {
