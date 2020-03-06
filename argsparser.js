@@ -42,7 +42,7 @@ exports.parseArgs = async () => {
   });
 
   if (params.type === 'help') {
-    throw new Error(
+    console.log(
       'Usage: ./stats chart_name other_params\n' +
       '\n' +
       'where <chart_name> is one of:\n' +
@@ -55,6 +55,7 @@ exports.parseArgs = async () => {
       '    <year>                    Only for top-teams chart\n' +
       '    [gold|silver|bronze]      Medal type'
     );
+    process.exit(1);
   } else if (!params.season) {
     throw new Error('You have to specify season.');
   } else if (!params.other && params.type === 'medals') {
