@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const sqlite = require('./dbwrapper.js');
+const query = require('./queries.js');
 const chart = require('./chart.js');
 const cli = require('./argsparser.js');
 
@@ -8,52 +9,28 @@ const DB_DEFAULT = './olympic_history.db';
 
 const getTopTeams = async (db, params) => {
   const medalClause = params.medal ? 'r.medal = ?' : 'r.medal > 0';
-  const yearClause = params.other ? 'AND g.year = ?' : '';
-  const sql =
-    'SELECT\n' +
-    '  t.noc_name as noc,\n' +
-    `  SUM(CASE WHEN ${medalClause} THEN 1 ELSE 0 END) as total\n` +
-    'FROM results r\n' +
-    '  JOIN games g ON g.id = r.game_id\n' +
-    '  JOIN athletes a ON a.id = r.athlete_id\n' +
-    '  JOIN teams t ON t.id = a.team_id\n' +
-    `WHERE g.season = ? ${yearClause}\n` +
-    'GROUP BY noc ORDER BY total DESC'
-    ;
+  const yearClause = params.other && 'AND g.year = ?';
+  const sql = await query.topTeams(medalClause, yearClause);
+
   const values = [params.medal, params.season, params.other].filter(val => Boolean(val));
 
   const header = [['NOC', 'Amount']];
-  const result = await sqlite.all(db, sql, values).then(res => {
-    const avg = res.reduce((acc, el) => acc + el.total, 0) / res.length;
-    res = res.filter(el => el.total > avg).map(el => [el.noc, el.total]);
-    return header.concat(res);
-  });
+  const result = await sqlite.all(db, sql, values);
+  const avg = result.reduce((acc, el) => acc + el.total, 0) / result.length;
 
-  return result;
+  return header.concat(result.filter(el => el.total > avg).map(el => [el.noc, el.total]));
 };
 
 const getMedalsStats = async (db, params) => {
   const medalClause = params.medal ? 'r.medal = ?' : 'r.medal > 0';
-  const nocClause = params.other ? 'AND t.noc_name = ?' : '';
-  const sql =
-    'SELECT\n' +
-    '  g.year as year,\n' +
-    `  SUM(CASE WHEN ${medalClause} THEN 1 ELSE 0 END) as total\n` +
-    'FROM results r\n' +
-    '  JOIN games g ON g.id = r.game_id\n' +
-    '  JOIN athletes a ON a.id = r.athlete_id\n' +
-    '  JOIN teams t ON t.id = a.team_id\n' +
-    `WHERE g.season = ? ${nocClause}\n` +
-    'GROUP BY year ORDER BY year DESC'
-    ;
+  const nocClause = params.other && 'AND t.noc_name = ?';
+  const sql = await query.medalStats(medalClause, nocClause);
   const values = [params.medal, params.season, params.other].filter(val => Boolean(val));
 
   const header = [['Year', 'Amount']];
-  const result = await sqlite.all(db, sql, values).then(res => {
-    return header.concat(res.map(el => [el.year, el.total]));
-  });
+  const result = await sqlite.all(db, sql, values);
 
-  return result;
+  return header.concat(result.map(el => [el.year, el.total]));
 };
 
 const main = async () => {
